@@ -1,0 +1,1 @@
+vscode-remote://ssh-remote%2B192.168.1.236/home/arduino/ArduinoApps/webcam-de-saorme-100/python/board_stream.py
