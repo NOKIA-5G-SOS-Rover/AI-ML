@@ -14,32 +14,46 @@ CAMERA_ID = os.getenv("CAMERA_ID", "CAM-01")
 
 def trimite_alerta_in_cloud(person_data):
     """Formateaza si trimite JSON-ul catre backend-ul C#"""
-    box_width = float(person_data["x2"] - person_data["x1"])
-    box_height = float(person_data["y2"] - person_data["y1"])
     
+    # 1. Calculam dimensiunile
+    raw_width = float(person_data["x2"] - person_data["x1"])
+    raw_height = float(person_data["y2"] - person_data["y1"])
+    
+    # 2. Fortam limitele pentru a trece de atributele [Range] din C#
+    box_width = max(raw_width, 0.1)   # Trebuie sa fie > 0
+    box_height = max(raw_height, 1.0) # Trebuie sa fie minim 1
+    
+    # 3. Asiguram ca scorul de incredere este intre 0 si 1
+    conf = float(person_data["confidence"])
+    if conf > 1.0:
+        conf = conf / 100.0
+        
     payload = {
         "roverId": ROVER_ID,
         "sessionId": "Misiune-Auto",
         "alertType": "Human Detected",
         "source": "YOLOv8-Camera",
         "detectedAt": time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
-        "locationX": 0.0, 
-        "locationY": 0.0,
+        "locationX": max(float(person_data.get("x1", 0.0)), 0.0), # Range >= 0
+        "locationY": max(float(person_data.get("y1", 0.0)), 0.0), # Range >= 0
         "boundingBoxWidth": box_width,
         "boundingBoxHeight": box_height,
-        "confidenceScore": float(person_data["confidence"]),
+        "confidenceScore": conf,
         "motorHaltRequested": True,
-        "injuryClass": "unknown",
+        "injuryClass": "Unknown",
         "cameraId": CAMERA_ID,
-        "status": "warning"
+        "status": "NEW"
     }
     
     try:
         res = requests.post(BACKEND_URL, json=payload, timeout=5)
         if res.status_code in (200, 201):
+            # .NET Core returneaza JSON-ul cu camelCase implicit
             print(f"✅ Alerta expediata in Cloud! ID Server: {res.json().get('id', 'N/A')}")
         else:
             print(f"❌ Backend-ul a respins alerta. Status code: {res.status_code}")
+            # Adaugam res.text ca sa vedem exact ce camp pica la validare in C#
+            print(f"Motiv: {res.text}") 
     except Exception as e:
         print(f"❌ Eroare la trimiterea catre cloud: {e}")
 
