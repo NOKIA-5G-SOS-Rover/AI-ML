@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 BACKEND_URL = os.getenv("BACKEND_URL", "http://92.87.91.146:5000/events")
-ROVER_ID = os.getenv("ROVER_ID", "ROVER-01")
+ROVER_ID = os.getenv("ROVER_ID", "ROVER-Q1")
 CAMERA_ID = os.getenv("CAMERA_ID", "CAM-01")
 
 def trimite_alerta_in_cloud(person_data):
@@ -49,13 +49,13 @@ def trimite_alerta_in_cloud(person_data):
         res = requests.post(BACKEND_URL, json=payload, timeout=5)
         if res.status_code in (200, 201):
             # .NET Core returneaza JSON-ul cu camelCase implicit
-            print(f"✅ Alerta expediata in Cloud! ID Server: {res.json().get('id', 'N/A')}")
+            print(f"Alerta expediata in Cloud! ID Server: {res.json().get('id', 'N/A')}")
         else:
-            print(f"❌ Backend-ul a respins alerta. Status code: {res.status_code}")
+            print(f"Backend-ul a respins alerta. Status code: {res.status_code}")
             # Adaugam res.text ca sa vedem exact ce camp pica la validare in C#
             print(f"Motiv: {res.text}") 
     except Exception as e:
-        print(f"❌ Eroare la trimiterea catre cloud: {e}")
+        print(f"Eroare la trimiterea catre cloud: {e}")
 
 def proceseaza_detectia(sursa="Semnal"):
     print(f"\n[!] Declanșare prin {sursa}! O persoană a apărut pe ecran.")
