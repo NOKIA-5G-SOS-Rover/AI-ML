@@ -144,11 +144,7 @@ Off by default (`ENABLE_TELEMETRY=False`). When enabled: reads `get_battery_raw`
 
 ## Known Issues
 
-1. **`Dockerfile` is stale** — copies/runs deleted files (`person_detector_server.py`, `send_detection.py`). Won't build as-is. Also unresolved: the container needs a way to supply the UNO Q's `arduino.app_utils` runtime.
-2. Some comments in `main.py` still reference `ml_RecordAndDetect.py` — the actual child process launched is `ml.py`.
-3. Telemetry is off by default; battery calibration and backend deployment are still TODO.
-4. SignalR client uses `verify_ssl=False` — revisit before using HTTPS in production.
-5. `API_BASE` / `ROVER_ID` defaults are hardcoded fallbacks — override via environment for real deployments, don't edit source.
+-
 
 ## Handoff Checklist
 

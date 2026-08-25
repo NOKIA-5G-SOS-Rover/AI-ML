@@ -31,7 +31,7 @@ from arduino.app_utils import App, Bridge
 # ============================================================
 # Config
 # ============================================================
-API_BASE = os.getenv("API_BASE", "http://92.87.91.146:5000")
+API_BASE = os.environ["API_BASE"]
 HUB_URL = f"{API_BASE}/dashboardHub"
 COMMAND_EVENT = "ReceiveCommand"
 TELEMETRY_URL = f"{API_BASE}/telemetry"        # TODO: confirm once backend dev deploys the endpoint
@@ -40,8 +40,8 @@ TELEMETRY_URL = f"{API_BASE}/telemetry"        # TODO: confirm once backend dev 
 # roverId: "ROVER-Q1". Must match exactly for RegisterRobot's group to line
 # up with SendCommandToRobot's.
 ROBOT_GROUP_ID = "ROVER-Q1"
-ROVER_ID = "ROVER-Q1"  # aligned across the whole system - also set ROVER_ID=ROVER-Q1
-                       # as an env var when running comms_manager.py (defaults to "ROVER-01")
+ROVER_ID = os.environ["ROVER_ID"]
+
 SESSION_ID = "session-" + datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
 
 DEFAULT_SPEED = 150  # PWM scale (0-255), used only if the dashboard omits Speed
@@ -50,8 +50,8 @@ DEFAULT_SPEED = 150  # PWM scale (0-255), used only if the dashboard omits Speed
 BATTERY_VREF = 3.3        # TODO: confirm - the ADC reference voltage the sketch used when scaling to 0-255
 BATTERY_R1_OHMS = 10000   # TODO: your actual top resistor (battery+ side)
 BATTERY_R2_OHMS = 10000   # TODO: your actual bottom resistor (GND side)
-BATTERY_V_EMPTY = 3.0     # TODO: your battery's empty voltage (single Li-ion/LiPo cell ~3.0V)
-BATTERY_V_FULL = 4.2      # TODO: your battery's full voltage (single Li-ion/LiPo cell ~4.2V)
+BATTERY_V_EMPTY = 6.0     # TODO: your battery's empty voltage (single Li-ion/LiPo cell ~3.0V)
+BATTERY_V_FULL = 8.4      # TODO: your battery's full voltage (single Li-ion/LiPo cell ~4.2V)
 # Multi-cell pack: multiply BOTH of the above by cell count (e.g. 2S: 6.0 / 8.4)
 ENABLE_TELEMETRY = False  # /telemetry isn't deployed on the backend yet (404s) - re-enable once it is
 TELEMETRY_INTERVAL_SECONDS = 5
@@ -723,7 +723,7 @@ def on_hub_error(data):
 
 hub_connection = (
     HubConnectionBuilder()
-    .with_url(HUB_URL, options={"verify_ssl": False})
+    .with_url(HUB_URL, options={"verify_ssl": True})
     .configure_logging(logging.DEBUG, socket_trace=True)
     .with_automatic_reconnect({
         "type": "raw",

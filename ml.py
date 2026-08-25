@@ -79,8 +79,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 # ============================================================
 # Configuration
 # ============================================================
-API_BASE = os.getenv("API_BASE", "http://92.87.91.146:5000")
-ROVER_ID = os.getenv("ROVER_ID", "ROVER-Q1")
+API_BASE = os.environ["API_BASE"]
+ROVER_ID = os.environ["ROVER_ID"]
 SESSION_ID = os.getenv(
     "SESSION_ID",
     "session-" + datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S"),
