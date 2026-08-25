@@ -11,9 +11,9 @@ Python software running on the Arduino UNO Q (Linux side) of the rover: camera c
 | `ml_RecordAndDetect.py` | Older camera pipeline, kept only for reference. Not used by `main.py`. |
 | `yolo26n_img480_int8.onnx` | ONNX model used by `ml.py` (480x480 input). |
 | `requirements.txt` | Python dependencies. |
-| `Dockerfile` | ⚠️ Stale — see [Known Issues](#known-issues). |
+| `Dockerfile` |  |
 | `.github/workflows/docker-publish.yml` | Builds/pushes the image to `ghcr.io/nokia-5g-sos-rover/rover-ai-module`. |
-| `.env` | Example Cloud endpoint and rover/camera config. |
+| `.env.example` | Example Cloud endpoint and rover/camera config. |
 
 ## Architecture
 
@@ -23,8 +23,11 @@ main.py
  ├── Bridge motor commands
  ├── manual control loop, watchdog, autonomy loop, telemetry loop
  └── spawns ml.py
-       ├── cam1: capture / inference / relay / local HTTP API (port 8081)
-       └── cam2: capture / inference / relay / local HTTP API (port 8082)
+       ├── cam1 capture ─┐
+       ├── cam2 capture ─┤
+       │                 └── shared ONNX inference thread
+       ├── cam1 encoder / relay / HTTP API :8081
+       └── cam2 encoder / relay / HTTP API :8082
 ```
 
 Boots in **MANUAL** mode. Switch to autonomous with the `set-mode-autonomous` command. There is no distance/obstacle sensor — only cameras — so autonomy is a mitigation, not real obstacle avoidance. Always supervise and keep manual control available.
@@ -72,9 +75,11 @@ python ml.py
 | `CAMERA_FOURCC` | `MJPG` |
 | `MODEL_PATH` | `yolo26n_img480_int8.onnx` |
 | `INFERENCE_SIZE` | `480` |
-| `CONFIDENCE_THRESHOLD` / `NMS_IOU_THRESHOLD` | `0.45` / `0.45` |
+| `CONFIDENCE_THRESHOLD` | `0.45` |
 | `WEB_FPS` / `PUSH_FPS` | `8` / `5` |
 | `JPEG_QUALITY` / `ALERT_JPEG_QUALITY` | `35` / `55` |
+| `ALERT_CONFIRM_FRAMES` | `3` |
+| `ALERT_CLEAR_FRAMES` | `3` |
 
 Keep camera IDs, device paths, and ports in sync between `main.py` and `ml.py`. `main.py`'s autonomy code polls `cam1` at `http://localhost:8081`.
 
@@ -94,17 +99,17 @@ curl http://localhost:8081/snapshot --output cam1.jpg
 
 ## Detection & Alerts
 
-Keeps only COCO class `0` (person), applies `CONFIDENCE_THRESHOLD`, then NMS. An alert fires only on the **absent→present transition** (not every frame), using the highest-confidence person:
+Keeps only COCO class `0` (person) and filters detections using `CONFIDENCE_THRESHOLD`. A person alert is triggered after the person is detected in `ALERT_CONFIRM_FRAMES` consecutive inference frames (default 3). After an alert the detector must observe `ALERT_CLEAR_FRAMES` consecutive frames without a person (default 3) before another alert can be triggered. 
 
 ```json
 {
   "alertType": "Human Detected",
-  "source": "YOLOv8-Camera",
+  "source": "YOLOv26-Camera",
   "motorHaltRequested": true,
   "injuryClass": "Unknown"
 }
 ```
-POSTed to `${API_BASE}/events`, then the frame is uploaded to `/events/{id}/image`. This runs off the inference thread so it can't block detection. Frames are separately relayed to `${API_BASE}/stream/{camera_id}/frame`.
+POSTed to `${API_BASE}/events`, then the frame is uploaded to `/events/{id}/image`. Alert HTTP uploads run on a separate thread, so backend latency does not block inference. Frames are separately relayed to `${API_BASE}/stream/{camera_id}/frame`.
 
 Autonomy can fire a second, distinct alert on arrival: `alertType: "PERSON_REACHED"`, `source: "autonomy"`.
 
@@ -138,13 +143,13 @@ Off by default (`ENABLE_TELEMETRY=False`). When enabled: reads `get_battery_raw`
 | Model not found | `MODEL_PATH` points to the `.onnx` file next to the script |
 | Camera won't open | V4L2 path, permissions, same mapping in `main.py` and `ml.py` |
 | No video on dashboard | Local `/snapshot` + `/api/detections` first, then relay errors / `API_BASE` |
-| No alert | Confirm a false→true transition, confidence threshold, backend reachability |
+| No alert | Confirm 3 consecutive person detections, confidence threshold, backend reachability |
 | Rover won't move | SignalR connectivity, exact rover ID/group (`ROVER-Q1`), `Bridge` availability |
 | Telemetry fails | Disabled by default; validate backend + battery calibration before enabling |
 
 ## Known Issues
 
--
+
 
 ## Handoff Checklist
 
